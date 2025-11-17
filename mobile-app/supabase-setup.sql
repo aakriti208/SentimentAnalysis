@@ -73,10 +73,23 @@ CREATE TABLE IF NOT EXISTS public.journal_entries (
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
+    is_draft BOOLEAN DEFAULT FALSE,
     date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Add is_draft column to existing table (if running update)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'journal_entries'
+        AND column_name = 'is_draft'
+    ) THEN
+        ALTER TABLE public.journal_entries ADD COLUMN is_draft BOOLEAN DEFAULT FALSE;
+    END IF;
+END $$;
 
 -- Enable Row Level Security
 ALTER TABLE public.journal_entries ENABLE ROW LEVEL SECURITY;

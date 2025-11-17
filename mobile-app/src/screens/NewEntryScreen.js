@@ -42,6 +42,7 @@ const NewEntryScreen = ({ navigation }) => {
       const entryData = {
         title: title.trim() || 'Untitled',
         content: content.trim(),
+        isDraft: false,
         date: new Date().toISOString(),
       };
 
@@ -52,6 +53,7 @@ const NewEntryScreen = ({ navigation }) => {
         id: savedEntry.id,
         title: savedEntry.title,
         content: savedEntry.content,
+        isDraft: false,
         date: savedEntry.date,
         createdAt: savedEntry.created_at,
         updatedAt: savedEntry.updated_at,
@@ -66,22 +68,69 @@ const NewEntryScreen = ({ navigation }) => {
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
+    // If there's content, save as draft
     if (title.trim() || content.trim()) {
       Alert.alert(
-        'Discard Entry?',
-        'You have unsaved changes. Are you sure you want to discard this entry?',
+        'Save as Draft?',
+        'Would you like to save this as a draft?',
         [
-          { text: 'Keep Writing', style: 'cancel' },
           {
             text: 'Discard',
             style: 'destructive',
             onPress: () => navigation.goBack(),
           },
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Save Draft',
+            onPress: async () => {
+              await saveDraft();
+            },
+          },
         ]
       );
     } else {
       navigation.goBack();
+    }
+  };
+
+  const saveDraft = async () => {
+    if (!user?.id) {
+      Alert.alert('Error', 'You must be logged in to save drafts.');
+      navigation.goBack();
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const entryData = {
+        title: title.trim() || 'Untitled Draft',
+        content: content.trim() || '',
+        isDraft: true,
+        date: new Date().toISOString(),
+      };
+
+      const savedEntry = await journalService.createEntry(user.id, entryData);
+
+      // Add to Redux store
+      dispatch(addEntry({
+        id: savedEntry.id,
+        title: savedEntry.title,
+        content: savedEntry.content,
+        isDraft: true,
+        date: savedEntry.date,
+        createdAt: savedEntry.created_at,
+        updatedAt: savedEntry.updated_at,
+      }));
+
+      Alert.alert('Draft Saved', 'Your draft has been saved successfully.');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Save draft error:', error);
+      Alert.alert('Error', 'Failed to save draft. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
