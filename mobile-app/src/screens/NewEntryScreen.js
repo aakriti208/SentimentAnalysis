@@ -10,33 +10,60 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { addEntry } from '../store/journalSlice';
+import { selectUser } from '../store/userSlice';
+import { journalService } from '../services/journalService';
 
 const NewEntryScreen = ({ navigation }) => {
   const dispatch = useDispatch();
+  const user = useSelector(selectUser);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title.trim() && !content.trim()) {
       Alert.alert('Empty Entry', 'Please write something before saving.');
       return;
     }
 
-    const newEntry = {
-      id: Date.now().toString(),
-      title: title.trim() || 'Untitled',
-      content: content.trim(),
-      date: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    if (!user?.id) {
+      Alert.alert('Error', 'You must be logged in to save entries.');
+      return;
+    }
 
-    dispatch(addEntry(newEntry));
-    navigation.goBack();
+    setSaving(true);
+
+    try {
+      const entryData = {
+        title: title.trim() || 'Untitled',
+        content: content.trim(),
+        date: new Date().toISOString(),
+      };
+
+      const savedEntry = await journalService.createEntry(user.id, entryData);
+
+      // Add to Redux store
+      dispatch(addEntry({
+        id: savedEntry.id,
+        title: savedEntry.title,
+        content: savedEntry.content,
+        date: savedEntry.date,
+        createdAt: savedEntry.created_at,
+        updatedAt: savedEntry.updated_at,
+      }));
+
+      navigation.goBack();
+    } catch (error) {
+      console.error('Save entry error:', error);
+      Alert.alert('Error', 'Failed to save entry. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -80,9 +107,14 @@ const NewEntryScreen = ({ navigation }) => {
           <TouchableOpacity
             style={styles.headerButton}
             onPress={handleSave}
+            disabled={saving}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="checkmark" size={28} color="#5B8DEF" />
+            {saving ? (
+              <ActivityIndicator size="small" color="#5B8DEF" />
+            ) : (
+              <Ionicons name="checkmark" size={28} color="#5B8DEF" />
+            )}
           </TouchableOpacity>
         </View>
 

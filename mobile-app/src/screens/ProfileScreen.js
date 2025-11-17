@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,18 @@ import {
   Image,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectUser, logout } from '../store/userSlice';
+import { authService } from '../services/authService';
 import * as ImagePicker from 'expo-image-picker';
 
 const ProfileScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const user = useSelector(selectUser);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = () => {
     Alert.alert(
@@ -27,7 +30,25 @@ const ProfileScreen = ({ navigation }) => {
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: () => dispatch(logout()),
+          onPress: async () => {
+            console.log('🔴 Logout button pressed - starting logout process');
+            try {
+              setLoggingOut(true);
+              console.log('🔴 Calling authService.logout()...');
+
+              // Call Supabase logout
+              await authService.logout();
+              console.log('✅ Supabase logout successful');
+
+              // Clear Redux state
+              dispatch(logout());
+              console.log('✅ Redux state cleared');
+            } catch (error) {
+              console.error('❌ Logout error:', error);
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+              setLoggingOut(false);
+            }
+          },
         },
       ]
     );
@@ -155,10 +176,20 @@ const ProfileScreen = ({ navigation }) => {
           <TouchableOpacity
             style={styles.logoutButton}
             onPress={handleLogout}
+            disabled={loggingOut}
             activeOpacity={0.8}
           >
-            <Ionicons name="log-out-outline" size={22} color="#EF4444" />
-            <Text style={styles.logoutText}>Logout</Text>
+            {loggingOut ? (
+              <>
+                <ActivityIndicator size="small" color="#EF4444" />
+                <Text style={styles.logoutText}>Logging out...</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="log-out-outline" size={22} color="#EF4444" />
+                <Text style={styles.logoutText}>Logout</Text>
+              </>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </View>

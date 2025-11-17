@@ -23,6 +23,7 @@ app.use('/api/', limiter);
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/journals', require('./routes/journal'));
 app.use('/api/ai', require('./routes/ai'));
+app.use('/api/ai', require('./routes/ai'));
 
 // Health check
 app.get('/health', (req, res) => {

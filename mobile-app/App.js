@@ -13,26 +13,56 @@ import { selectIsAuthenticated } from './src/store/userSlice';
 
 const Stack = createStackNavigator();
 
+// Linking configuration for web URLs
+const linking = {
+  prefixes: ['http://localhost:8081', 'exp://'],
+  config: {
+    screens: {
+      // Auth screens
+      Login: 'login',
+      Register: 'register',
+
+      // App screens
+      Home: '',
+      NewEntry: 'new-entry',
+      Profile: 'profile',
+    },
+  },
+};
+
 function Navigation() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       {isAuthenticated ? (
         <Stack.Navigator
           screenOptions={{
             headerShown: false,
           }}
         >
-          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen
+            name="Home"
+            component={HomeScreen}
+            options={{
+              title: 'Home',
+            }}
+          />
           <Stack.Screen
             name="NewEntry"
             component={NewEntryScreen}
             options={{
               presentation: 'modal',
+              title: 'New Entry',
             }}
           />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen
+            name="Profile"
+            component={ProfileScreen}
+            options={{
+              title: 'Profile',
+            }}
+          />
         </Stack.Navigator>
       ) : (
         <Stack.Navigator
@@ -40,8 +70,20 @@ function Navigation() {
             headerShown: false,
           }}
         >
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen
+            name="Login"
+            component={LoginScreen}
+            options={{
+              title: 'Login',
+            }}
+          />
+          <Stack.Screen
+            name="Register"
+            component={RegisterScreen}
+            options={{
+              title: 'Register',
+            }}
+          />
         </Stack.Navigator>
       )}
     </NavigationContainer>

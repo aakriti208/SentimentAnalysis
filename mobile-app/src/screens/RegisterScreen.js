@@ -15,6 +15,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { registerStart, registerSuccess, registerFailure, selectAuthLoading, selectAuthError } from '../store/userSlice';
+import { authService } from '../services/authService';
+import { isValidEmail, isValidPassword, isValidName } from '../utils/validation';
 
 const RegisterScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -29,38 +31,49 @@ const RegisterScreen = ({ navigation }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleRegister = async () => {
+    // Check if all fields are filled
     if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
+    // Validate name
+    const nameValidation = isValidName(name);
+    if (!nameValidation.isValid) {
+      Alert.alert('Invalid Name', nameValidation.message);
+      return;
+    }
+
+    // Validate email
+    if (!isValidEmail(email.trim())) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address');
+      return;
+    }
+
+    // Validate password
+    const passwordValidation = isValidPassword(password);
+    if (!passwordValidation.isValid) {
+      Alert.alert('Invalid Password', passwordValidation.message);
+      return;
+    }
+
+    // Check if passwords match
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
-      return;
-    }
-
     dispatch(registerStart());
 
-    // TODO: Replace with actual API call
-    setTimeout(() => {
-      // Simulated registration
-      const userData = {
-        user: {
-          id: Date.now().toString(),
-          name: name.trim(),
-          email: email.trim(),
-          avatar: null,
-        },
-        token: 'dummy-token-' + Date.now(),
-      };
-
+    try {
+      const userData = await authService.register(email.trim(), password, name.trim());
       dispatch(registerSuccess(userData));
-    }, 1000);
+      Alert.alert('Success', 'Account created successfully! You can now start journaling.');
+    } catch (error) {
+      const errorMessage = error.message || 'Registration failed. Please try again.';
+      dispatch(registerFailure(errorMessage));
+      Alert.alert('Registration Failed', errorMessage);
+    }
   };
 
   return (

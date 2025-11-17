@@ -15,6 +15,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginStart, loginSuccess, loginFailure, selectAuthLoading, selectAuthError } from '../store/userSlice';
+import { authService } from '../services/authService';
+import { isValidEmail } from '../utils/validation';
 
 const LoginScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -31,23 +33,22 @@ const LoginScreen = ({ navigation }) => {
       return;
     }
 
+    // Validate email format
+    if (!isValidEmail(email.trim())) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address');
+      return;
+    }
+
     dispatch(loginStart());
 
-    // TODO: Replace with actual API call
-    setTimeout(() => {
-      // Simulated login
-      const userData = {
-        user: {
-          id: '1',
-          name: email.split('@')[0],
-          email: email,
-          avatar: null,
-        },
-        token: 'dummy-token-' + Date.now(),
-      };
-
+    try {
+      const userData = await authService.login(email.trim(), password);
       dispatch(loginSuccess(userData));
-    }, 1000);
+    } catch (error) {
+      const errorMessage = error.message || 'Login failed. Please check your credentials.';
+      dispatch(loginFailure(errorMessage));
+      Alert.alert('Login Failed', errorMessage);
+    }
   };
 
   return (
