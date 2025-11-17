@@ -2,21 +2,15 @@ import { supabase } from '../config/supabase';
 
 export const journalService = {
   /**
-   * Get all journal entries for a user (excluding drafts by default)
+   * Get all journal entries for a user
    */
-  async getEntries(userId, includeDrafts = false) {
+  async getEntries(userId) {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('journal_entries')
         .select('*')
-        .eq('user_id', userId);
-
-      // By default, exclude drafts
-      if (!includeDrafts) {
-        query = query.eq('is_draft', false);
-      }
-
-      const { data, error } = await query.order('created_at', { ascending: false });
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data || [];
@@ -57,7 +51,6 @@ export const journalService = {
             user_id: userId,
             title: entryData.title,
             content: entryData.content,
-            is_draft: entryData.isDraft || false,
             date: entryData.date || new Date().toISOString(),
           },
         ])
@@ -135,60 +128,19 @@ export const journalService = {
   },
 
   /**
-   * Get entry count for a user (excluding drafts)
+   * Get entry count for a user
    */
   async getEntryCount(userId) {
     try {
       const { count, error } = await supabase
         .from('journal_entries')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('is_draft', false);
+        .eq('user_id', userId);
 
       if (error) throw error;
       return count || 0;
     } catch (error) {
       console.error('Get entry count error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Get draft entries for a user
-   */
-  async getDrafts(userId) {
-    try {
-      const { data, error } = await supabase
-        .from('journal_entries')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_draft', true)
-        .order('updated_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Get drafts error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Publish a draft (convert to published entry)
-   */
-  async publishDraft(entryId) {
-    try {
-      const { data, error } = await supabase
-        .from('journal_entries')
-        .update({ is_draft: false })
-        .eq('id', entryId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Publish draft error:', error);
       throw error;
     }
   },

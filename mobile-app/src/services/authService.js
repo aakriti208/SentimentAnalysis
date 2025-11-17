@@ -15,6 +15,7 @@ export const authService = {
           data: {
             name,
           },
+          emailRedirectTo: undefined, // Disable email confirmation redirect
         },
       });
 
@@ -109,7 +110,16 @@ export const authService = {
         password,
       });
 
-      if (signInError) throw signInError;
+      if (signInError) {
+        // Provide user-friendly error messages
+        if (signInError.message === 'Email not confirmed') {
+          throw new Error('Please verify your email address. Check your inbox for a confirmation link.');
+        }
+        if (signInError.message === 'Invalid login credentials') {
+          throw new Error('Invalid email or password. Please try again.');
+        }
+        throw signInError;
+      }
 
       // Get user profile
       const { data: profile, error: profileError } = await supabase
