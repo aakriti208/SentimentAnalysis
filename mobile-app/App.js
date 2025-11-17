@@ -1,0 +1,58 @@
+import { StatusBar } from 'expo-status-bar';
+import React from 'react';
+import { Provider, useSelector } from 'react-redux';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import store from './src/store';
+import HomeScreen from './src/screens/HomeScreen';
+import NewEntryScreen from './src/screens/NewEntryScreen';
+import LoginScreen from './src/screens/LoginScreen';
+import RegisterScreen from './src/screens/RegisterScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
+import { selectIsAuthenticated } from './src/store/userSlice';
+
+const Stack = createStackNavigator();
+
+function Navigation() {
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+
+  return (
+    <NavigationContainer>
+      {isAuthenticated ? (
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+          }}
+        >
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen
+            name="NewEntry"
+            component={NewEntryScreen}
+            options={{
+              presentation: 'modal',
+            }}
+          />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
+        </Stack.Navigator>
+      ) : (
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+          }}
+        >
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+        </Stack.Navigator>
+      )}
+    </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
+    <Provider store={store}>
+      <Navigation />
+      <StatusBar style="auto" />
+    </Provider>
+  );
+}
