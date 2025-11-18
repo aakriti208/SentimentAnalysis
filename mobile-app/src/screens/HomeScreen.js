@@ -6,10 +6,11 @@ import StatsCalendarBar from '../components/StatsCalendarBar';
 import FloatingAddButton from '../components/FloatingAddButton';
 import JournalCalendar from '../components/JournalCalendar';
 import JournalCard from '../components/JournalCard';
-import QuoteCard from '../components/QuoteCard';
-import { selectAllEntries, deleteEntry, setEntries } from '../store/journalSlice';
+import AnalysisCard from '../components/AnalysisCard';
+import { selectAllEntries, deleteEntry, setEntries, setTotalCount } from '../store/journalSlice';
 import { selectUser } from '../store/userSlice';
 import { journalService } from '../services/journalService';
+import { analysisService } from '../services/analysisService';
 
 const HomeScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -17,20 +18,46 @@ const HomeScreen = ({ navigation }) => {
   const user = useSelector(selectUser);
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [analysis, setAnalysis] = useState(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const ITEMS_PER_PAGE = 10;
 
   // Load entries from Supabase when component mounts
   useEffect(() => {
-    loadEntries();
+    loadEntries(true);
   }, [user]);
 
-  const loadEntries = async () => {
+  // Load analysis when entries change
+  useEffect(() => {
+    if (entries.length >= 3) {
+      loadAnalysis();
+    }
+  }, [entries.length]);
+
+  const loadEntries = async (isInitial = false) => {
     if (!user?.id) {
       setLoading(false);
       return;
     }
 
+    // Prevent loading if already loading or no more items
+    if (!isInitial && (loadingMore || !hasMore)) {
+      return;
+    }
+
     try {
-      setLoading(true);
+      if (isInitial) {
+        setLoading(true);
+        setPage(0);
+        setHasMore(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const currentPage = isInitial ? 0 : page;
       const fetchedEntries = await journalService.getEntries(user.id);
 
       // Transform entries to match Redux format
@@ -43,11 +70,48 @@ const HomeScreen = ({ navigation }) => {
         updatedAt: entry.updated_at,
       }));
 
-      dispatch(setEntries(transformedEntries));
+      // Set total count (always the full length)
+      dispatch(setTotalCount(transformedEntries.length));
+
+      // Paginate entries
+      const startIndex = currentPage * ITEMS_PER_PAGE;
+      const endIndex = startIndex + ITEMS_PER_PAGE;
+      const paginatedEntries = transformedEntries.slice(0, endIndex);
+
+      // Check if there are more entries
+      setHasMore(endIndex < transformedEntries.length);
+
+      dispatch(setEntries(paginatedEntries));
+
+      if (!isInitial) {
+        setPage(currentPage + 1);
+      }
     } catch (error) {
       console.error('Load entries error:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (!loading && !loadingMore && hasMore) {
+      loadEntries(false);
+    }
+  };
+
+  const loadAnalysis = async () => {
+    if (entries.length === 0) return;
+
+    try {
+      setAnalysisLoading(true);
+      const result = await analysisService.analyzeUserHistory(entries);
+      setAnalysis(result);
+    } catch (error) {
+      console.error('Analysis loading error:', error);
+      // Don't show error to user, just silently fail
+    } finally {
+      setAnalysisLoading(false);
     }
   };
 
@@ -66,23 +130,37 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleCardPress = (entry) => {
-    console.log('Card pressed:', entry);
-    // navigation.navigate('EntryDetail', { entryId: entry.id });
+    navigation.navigate('EntryDetail', { entryId: entry.id });
   };
 
   const handleEdit = (entry) => {
-    console.log('Edit entry:', entry);
-    // navigation.navigate('EditEntry', { entryId: entry.id });
+    navigation.navigate('EditEntry', { entryId: entry.id });
   };
 
   const handleDelete = async (entry) => {
-    try {
-      await journalService.deleteEntry(entry.id);
-      dispatch(deleteEntry(entry.id));
-    } catch (error) {
-      console.error('Delete entry error:', error);
-      Alert.alert('Error', 'Failed to delete entry. Please try again.');
-    }
+    Alert.alert(
+      'Delete Entry',
+      'Are you sure you want to delete this entry? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await journalService.deleteEntry(entry.id);
+              dispatch(deleteEntry(entry.id));
+            } catch (error) {
+              console.error('Delete entry error:', error);
+              Alert.alert('Error', 'Failed to delete entry. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleAvatarPress = () => {
@@ -100,7 +178,7 @@ const HomeScreen = ({ navigation }) => {
 
   const renderHeader = () => (
     <>
-      <QuoteCard />
+      <AnalysisCard analysis={analysis} loading={analysisLoading} />
       <Text style={styles.sectionTitle}>Your Entries</Text>
     </>
   );
@@ -123,6 +201,17 @@ const HomeScreen = ({ navigation }) => {
     );
   };
 
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color="#5B8DEF" />
+        <Text style={styles.footerText}>Loading more entries...</Text>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -141,6 +230,9 @@ const HomeScreen = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={renderHeader}
           ListEmptyComponent={renderEmpty}
+          ListFooterComponent={renderFooter}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
         />
 
         <FloatingAddButton onPress={handleAddEntry} />
@@ -215,6 +307,18 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#6B7280',
     marginTop: 16,
+  },
+  footerLoader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    gap: 12,
+  },
+  footerText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
   },
   modalOverlay: {
     flex: 1,

@@ -3,6 +3,7 @@ import { format, parseISO, differenceInCalendarDays } from 'date-fns';
 
 const initialState = {
   entries: [],
+  totalCount: 0,
   loading: false,
   error: null,
 };
@@ -13,9 +14,13 @@ const journalSlice = createSlice({
   reducers: {
     addEntry: (state, action) => {
       state.entries.push(action.payload);
+      state.totalCount += 1;
     },
     setEntries: (state, action) => {
       state.entries = action.payload;
+    },
+    setTotalCount: (state, action) => {
+      state.totalCount = action.payload;
     },
     updateEntry: (state, action) => {
       const index = state.entries.findIndex(entry => entry.id === action.payload.id);
@@ -25,6 +30,7 @@ const journalSlice = createSlice({
     },
     deleteEntry: (state, action) => {
       state.entries = state.entries.filter(entry => entry.id !== action.payload);
+      state.totalCount = Math.max(0, state.totalCount - 1);
     },
     setLoading: (state, action) => {
       state.loading = action.payload;
@@ -35,12 +41,12 @@ const journalSlice = createSlice({
   },
 });
 
-export const { addEntry, setEntries, updateEntry, deleteEntry, setLoading, setError } = journalSlice.actions;
+export const { addEntry, setEntries, setTotalCount, updateEntry, deleteEntry, setLoading, setError } = journalSlice.actions;
 
 // Selectors
 export const selectAllEntries = (state) => state.journal.entries;
 
-export const selectEntryCount = (state) => state.journal.entries.length;
+export const selectEntryCount = (state) => state.journal.totalCount;
 
 export const selectCurrentStreak = (state) => {
   const entries = state.journal.entries;

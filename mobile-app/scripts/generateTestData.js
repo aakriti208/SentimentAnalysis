@@ -111,7 +111,7 @@ function getRandomItem(array) {
 
 // Function to generate journal entries
 async function generateTestData(userId, count = 50) {
-  console.log(`🚀 Generating ${count} test journal entries...`);
+  console.log(`Generating ${count} test journal entries...`);
 
   const entries = [];
 
@@ -156,21 +156,33 @@ async function generateTestData(userId, count = 50) {
 // Main function
 async function main() {
   try {
-    // Get current user ID (you need to be logged in)
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get user ID from command line argument or try to get authenticated user
+    let userId = process.argv[2];
 
-    if (userError || !user) {
-      console.error('❌ Not authenticated. Please login first.');
-      console.log('\n💡 You can login by running the app and signing in,');
-      console.log('   then run this script again.');
-      process.exit(1);
+    if (!userId) {
+      // Try to get authenticated user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.error('❌ No user ID provided and not authenticated.');
+        console.log('\n💡 Usage: npm run generate-test-data <user-id>');
+        console.log('   Or login to the app first and run without arguments.\n');
+        console.log('   To find your user ID:');
+        console.log('   1. Login to your app');
+        console.log('   2. Go to Supabase Dashboard > Authentication > Users');
+        console.log('   3. Copy your user ID from the list\n');
+        process.exit(1);
+      }
+
+      userId = user.id;
+      console.log(`👤 User ID: ${user.id}`);
+      console.log(`📧 Email: ${user.email}\n`);
+    } else {
+      console.log(`👤 Using User ID: ${userId}\n`);
     }
 
-    console.log(`👤 User ID: ${user.id}`);
-    console.log(`📧 Email: ${user.email}\n`);
-
     // Generate test data
-    await generateTestData(user.id, 50);
+    await generateTestData(userId, 50);
 
     console.log('\n🎉 Done! Check your journal app to see the entries.');
 

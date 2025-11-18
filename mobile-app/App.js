@@ -6,6 +6,8 @@ import { createStackNavigator } from '@react-navigation/stack';
 import store from './src/store';
 import HomeScreen from './src/screens/HomeScreen';
 import NewEntryScreen from './src/screens/NewEntryScreen';
+import EntryDetailScreen from './src/screens/EntryDetailScreen';
+import EditEntryScreen from './src/screens/EditEntryScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
@@ -25,6 +27,8 @@ const linking = {
       // App screens
       Home: '',
       NewEntry: 'new-entry',
+      EntryDetail: 'entry/:entryId',
+      EditEntry: 'entry/:entryId/edit',
       Profile: 'profile',
     },
   },
@@ -54,6 +58,21 @@ function Navigation() {
             options={{
               presentation: 'modal',
               title: 'New Entry',
+            }}
+          />
+          <Stack.Screen
+            name="EntryDetail"
+            component={EntryDetailScreen}
+            options={{
+              title: 'Entry Details',
+            }}
+          />
+          <Stack.Screen
+            name="EditEntry"
+            component={EditEntryScreen}
+            options={{
+              presentation: 'modal',
+              title: 'Edit Entry',
             }}
           />
           <Stack.Screen
